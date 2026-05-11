@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TikTok Focus - Tech Curator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background-color: black; font-family: sans-serif; }
+        .video-container { 
+            scroll-snap-type: y mandatory; 
+            overflow-y: scroll; 
+            height: calc(100vh - 65px); 
+            -webkit-overflow-scrolling: touch;
+        }
+        .video-card { 
+            scroll-snap-align: start; 
+            height: calc(100vh - 65px); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            position: relative;
+        }
+        .video-container::-webkit-scrollbar { display: none; }
+        header::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+    <header id="nav" class="h-[65px] flex items-center overflow-x-auto px-4 gap-2 border-b border-gray-800 bg-black sticky top-0 z-50"></header>
+
+    <main id="app" class="video-container"></main>
+
+    <script async src="https://www.tiktok.com/embed.js"></script>
+
+    <script>
+        let allData = {};
+
+        async function loadData() {
+            try {
+                const response = await fetch('data.json?t=' + Date.now()); // Tránh cache cũ
+                allData = await response.json();
+                const topics = Object.keys(allData);
+                renderNav(topics);
+                if (topics.length > 0) showTopic(topics[0]);
+            } catch (err) {
+                document.getElementById('app').innerHTML = `
+                    <div class="text-center p-20 text-gray-400">
+                        <p>Đang khởi tạo dữ liệu...</p>
+                        <p class="text-xs mt-2 italic">Hãy chắc chắn bạn đã chạy GitHub Action thành công.</p>
+                    </div>`;
+            }
+        }
+
+        function renderNav(topics) {
+            const nav = document.getElementById('nav');
+            nav.innerHTML = topics.map(t => `
+                <button onclick="showTopic('${t}')" class="topic-btn whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold bg-gray-800 text-gray-300 transition-all">
+                    ${t}
+                </button>
+            `).join('');
+        }
+
+        function showTopic(topic) {
+            // Cập nhật trạng thái nút
+            document.querySelectorAll('.topic-btn').forEach(btn => {
+                if (btn.innerText === topic) {
+                    btn.classList.add('bg-red-600', 'text-white');
+                    btn.classList.remove('bg-gray-800', 'text-gray-300');
+                } else {
+                    btn.classList.remove('bg-red-600', 'text-white');
+                    btn.classList.add('bg-gray-800', 'text-gray-300');
+                }
+            });
+
+            const container = document.getElementById('app');
+            container.innerHTML = allData[topic].map(id => `
+                <div class="video-card">
+                    <blockquote class="tiktok-embed" data-video-id="${id}" style="width: 100%; height: 100%;">
+                        <section></section>
+                    </blockquote>
+                </div>
+            `).join('');
+
+            // Yêu cầu TikTok render lại các video mới
+            if (window.TiktokEmbed) {
+                window.TiktokEmbed.lib.render();
+            }
+            container.scrollTop = 0;
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
